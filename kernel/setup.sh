@@ -39,11 +39,12 @@ perform_cleanup() {
 # Sets up or update KernelSU environment
 setup_kernelsu() {
     echo "[+] Setting up KernelSU..."
-    test -d "$GKI_ROOT/KernelSU" || git clone https://github.com/tiann/KernelSU && echo "[+] Repository cloned."
+    test -d "$GKI_ROOT/KernelSU" || git clone https://github.com/KenshyTp/Ksu.git && echo "[+] Repository cloned."
     cd "$GKI_ROOT/KernelSU"
+    git remote set-url origin https://github.com/KenshyTp/Ksu.git  # Configura la URL remota
     git stash && echo "[-] Stashed current changes."
     if [ "$(git status | grep -Po 'v\d+(\.\d+)*' | head -n1)" ]; then
-        git checkout main && echo "[-] Switched to main branch."
+        git checkout ksu && echo "[-] Switched to ksu branch."
     fi
     git pull && echo "[+] Repository updated."
     if [ -z "${1-}" ]; then
