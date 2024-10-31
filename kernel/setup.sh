@@ -25,7 +25,6 @@ initialize_variables() {
     DRIVER_KCONFIG=$DRIVER_DIR/Kconfig
 }
 
-# Reverts modifications made by this script
 perform_cleanup() {
     echo "[+] Cleaning up..."
     [ -L "$DRIVER_DIR/kernelsu" ] && rm "$DRIVER_DIR/kernelsu" && echo "[-] Symlink removed."
@@ -36,14 +35,22 @@ perform_cleanup() {
     fi
 }
 
-# Sets up or update KernelSU environment
 setup_kernelsu() {
     echo "[+] Setting up KernelSU..."
-    test -d "$GKI_ROOT/Ksu" || git clone https://github.com/KenshyTp/Ksu.git && echo "[+] Repository cloned."
+    if ! test -d "$GKI_ROOT/Ksu"; then
+        git clone https://github.com/KenshyTp/Ksu.git "$GKI_ROOT/Ksu" && echo "[+] Repository cloned."
+    fi
     cd "$GKI_ROOT/Ksu"
-    git remote set-url origin https://github.com/KenshyTp/Ksu.git  # Configura la URL remota
+    git remote set-url origin https://github.com/KenshyTp/Ksu.git
     git stash && echo "[-] Stashed current changes."
-    git checkout ksu && echo "[-] Switched to ksu branch."
+
+    if git branch -a | grep -q "remotes/origin/ksu"; then
+        git checkout ksu && echo "[-] Switched to ksu branch."
+    else
+        echo "[ERROR] Branch ksu does not exist."
+        exit 1
+    fi
+
     git pull && echo "[+] Repository updated."
     if [ -z "${1-}" ]; then
         git checkout "$(git describe --abbrev=0 --tags)" && echo "[-] Checked out latest tag."
@@ -53,13 +60,11 @@ setup_kernelsu() {
     cd "$DRIVER_DIR"
     ln -sf "$(realpath --relative-to="$DRIVER_DIR" "$GKI_ROOT/Ksu/kernel")" "kernelsu" && echo "[+] Symlink created."
 
-    # Add entries in Makefile and Kconfig if not already existing
     grep -q "kernelsu" "$DRIVER_MAKEFILE" || printf "\nobj-\$(CONFIG_KSU) += kernelsu/\n" >> "$DRIVER_MAKEFILE" && echo "[+] Modified Makefile."
     grep -q "source \"drivers/kernelsu/Kconfig\"" "$DRIVER_KCONFIG" || sed -i "/endmenu/i\source \"drivers/kernelsu/Kconfig\"" "$DRIVER_KCONFIG" && echo "[+] Modified Kconfig."
     echo '[+] Done.'
 }
 
-# Process command-line arguments
 if [ "$#" -eq 0 ]; then
     initialize_variables
     setup_kernelsu
